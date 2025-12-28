@@ -1,25 +1,12 @@
-import { useState, useEffect } from 'react'
-import init, { greet, add } from 'net-core'
-import './App.css'
+import { NetworkCanvas } from './components/NetworkCanvas';
 
 function App() {
-  const [msg, setMsg] = useState<string>("")
-  const [sum, setSum] = useState<number>(0)
-
-  useEffect(() => {
-    init().then(() => {
-      setMsg(greet())
-      setSum(add(10, 20))
-    })
-  }, [])
-
   return (
-    <div>
+    <div style={{ padding: '20px' }}>
       <h1>Protocol Battle Arena</h1>
-      <p>Message: {msg}</p>
-      <p>Result: {sum}</p>
+      <NetworkCanvas />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

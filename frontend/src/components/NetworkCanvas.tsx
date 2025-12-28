@@ -1,0 +1,74 @@
+// frontend/src/components/NetworkCanvas.tsx
+
+import { useEffect, useRef, useState } from 'react';
+import init, { NetworkState } from 'net-core';
+
+const PACKET_SIZE = 24;
+const OFFSET_X = 8;
+const OFFSET_Y = 16;
+
+export const NetworkCanvas = () => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const stateRef = useRef<NetworkState | null>(null);
+
+    const [wasmMemory, setWasmMemory] = useState<WebAssembly.Memory | null>(null);
+
+    useEffect(() => {
+        const startWasm = async () => {
+            const wasm = await init();
+            setWasmMemory(wasm.memory);
+
+            const state = NetworkState.new();
+            state.add_packet(0); // TCP
+            state.add_packet(1); // UDP
+            stateRef.current = state;
+        };
+        startWasm();
+    }, []);
+
+    useEffect(() => {
+        if (!wasmMemory) return;
+
+        const render = () => {
+            const canvas = canvasRef.current;
+            const state = stateRef.current;
+            if (!canvas || !state) return;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            state.tick();
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const view = new DataView(wasmMemory.buffer);
+            const ptr = state.packets_ptr();
+            const len = state.packets_len();
+
+            for (let i = 0; i < len; i++) {
+                const base = ptr + (i * PACKET_SIZE);
+                const x = view.getFloat64(base + OFFSET_X, true);
+                const y = view.getFloat64(base + OFFSET_Y, true);
+
+                ctx.beginPath();
+                ctx.arc(x, y, 10, 0, Math.PI * 2);
+                ctx.fillStyle = 'blue';
+                ctx.fill();
+            }
+
+            requestAnimationFrame(render);
+        };
+
+        const animationId = requestAnimationFrame(render);
+        return () => cancelAnimationFrame(animationId);
+    }, [wasmMemory]);
+
+    return (
+        <canvas
+            ref={canvasRef}
+            width={800}
+            height={400}
+            style={{ border: '1px solid black', background: '#f0f0f0' }}
+        />
+    );
+};
