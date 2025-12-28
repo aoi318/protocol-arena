@@ -1,3 +1,7 @@
+// net-core/src/lib.rs
+
+pub mod packets;
+
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
