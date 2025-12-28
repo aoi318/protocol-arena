@@ -3,6 +3,16 @@
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct Packet {
+    pub id: u32,
+    pub kind: u8, // 0: TCP, 1: UDP
+    pub x: f64,
+    pub y: f64,
+}
+
+#[wasm_bindgen]
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy)]
 pub struct TcpHeader {
@@ -26,9 +36,28 @@ pub struct UdpHeader {
     pub checksum: u16,
 }
 
+impl Packet {
+    pub fn new(id: u32, kind: u8, x: f64, y: f64) -> Self {
+        Self { id, kind, x, y }
+    }
+
+    pub fn step(&mut self) {
+        self.x += 1.0;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_packet_movement() {
+        let mut packet: Packet = Packet::new(1, 0, 0.0, 50.0);
+
+        packet.step();
+
+        assert!(packet.x > 0.0);
+    }
 
     #[test]
     fn test_tcp_header_size() {
