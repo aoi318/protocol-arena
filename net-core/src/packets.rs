@@ -10,6 +10,7 @@ pub struct Packet {
     pub kind: u8, // 0: TCP, 1: UDP
     pub x: f64,
     pub y: f64,
+    pub tcp_state: u8,
 }
 
 #[wasm_bindgen]
@@ -27,6 +28,18 @@ pub struct TcpHeader {
 }
 
 #[wasm_bindgen]
+#[repr(u8)]
+#[derive(Debug, Clone, Copy)]
+pub enum TcpState {
+    Closed = 0,
+    Listen = 1,
+    SynSent = 2,
+    SynReceived = 3,
+    Established = 4,
+    FinWait = 5,
+}
+
+#[wasm_bindgen]
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy)]
 pub struct UdpHeader {
@@ -38,7 +51,13 @@ pub struct UdpHeader {
 
 impl Packet {
     pub fn new(id: u32, kind: u8, x: f64, y: f64) -> Self {
-        Self { id, kind, x, y }
+        Self {
+            id,
+            kind,
+            x,
+            y,
+            tcp_state: TcpState::Closed as u8,
+        }
     }
 
     pub fn step(&mut self) {
@@ -49,6 +68,13 @@ impl Packet {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_packet_creation() {
+        let p: Packet = Packet::new(1, 0, 10.0, 20.0);
+
+        assert_eq!(p.tcp_state, TcpState::Closed as u8);
+    }
 
     #[test]
     fn test_packet_movement() {
