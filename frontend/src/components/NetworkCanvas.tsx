@@ -100,9 +100,9 @@ export const NetworkCanvas = () => {
 
                 return;
             }
-
-            setSelectedPacket(null);
         }
+
+        setSelectedPacket(null);
     }
 
     return (
