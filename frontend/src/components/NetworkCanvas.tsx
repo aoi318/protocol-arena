@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import init, { NetworkState } from 'net-core';
 
-const PACKET_SIZE = 24;
+const PACKET_SIZE = 32;
+const OFFSET_STATE = 24;
 const OFFSET_X = 8;
 const OFFSET_Y = 16;
 
@@ -49,10 +50,18 @@ export const NetworkCanvas = () => {
                 const base = ptr + (i * PACKET_SIZE);
                 const x = view.getFloat64(base + OFFSET_X, true);
                 const y = view.getFloat64(base + OFFSET_Y, true);
+                const stateVal = view.getUint8(base + OFFSET_STATE);
+
+                console.log(stateVal);
 
                 ctx.beginPath();
                 ctx.arc(x, y, 10, 0, Math.PI * 2);
-                ctx.fillStyle = 'blue';
+
+                if (stateVal === 0) ctx.fillStyle = 'gray';
+                else if (stateVal === 2) ctx.fillStyle = 'orange';
+                else if (stateVal === 4) ctx.fillStyle = 'green';
+                else ctx.fillStyle = 'blue';
+
                 ctx.fill();
             }
 
