@@ -22,8 +22,6 @@ export const NetworkCanvas = () => {
             setWasmMemory(wasm.memory);
 
             const state = NetworkState.new();
-            state.add_packet(0); // TCP
-            state.add_packet(1); // UDP
             stateRef.current = state;
         };
         startWasm();
@@ -72,6 +70,13 @@ export const NetworkCanvas = () => {
         return () => cancelAnimationFrame(animationId);
     }, [wasmMemory]);
 
+    const handleAddPacket = (kind: number) => {
+        const state = stateRef.current;
+        if (!state) return;
+
+        state.add_packet(kind);
+    }
+
     const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
         const canvas = canvasRef.current;
         const state = stateRef.current;
@@ -104,7 +109,26 @@ export const NetworkCanvas = () => {
     }
 
     return (
-        <div>
+        <div style={{ padding: '20px' }}>
+            <h2 style={{ marginBottom: '10px' }}>Protocol Battle Arena</h2>
+
+            {/* 操作パネル */}
+            <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
+                <button
+                    onClick={() => handleAddPacket(0)}
+                    style={{ padding: '10px 20px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                    Send TCP (SYN)
+                </button>
+                <button
+                    onClick={() => handleAddPacket(1)}
+                    style={{ padding: '10px 20px', background: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                    Send UDP
+                </button>
+            </div>
+
+            {/* メイン画面 */}
             <canvas
                 ref={canvasRef}
                 width={800}
@@ -113,6 +137,7 @@ export const NetworkCanvas = () => {
                 onClick={handleClick}
             />
 
+            {/* メモリ */}
             <HexViewer data={selectedPacket} label="Packet Snapshot" />
         </div>
 
