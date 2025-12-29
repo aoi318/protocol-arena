@@ -11,11 +11,13 @@ pub struct Packet {
     pub tcp_state: u8,
     pub x: f64,
     pub y: f64,
+    pub vx: f64,
     /*
     | 0-3 (id) | 4 (kind) | 5 (state) | 6-7 (PAD 2byte) |
     | 8-15 (x) |
     |16-23 (y) |
-    Total: 24 bytes
+    |24-31 (vx) |
+    Total: 32 bytes
     */
 }
 
@@ -63,11 +65,12 @@ impl Packet {
             tcp_state: TcpState::Closed as u8,
             x,
             y,
+            vx: 1.0,
         }
     }
 
     pub fn step(&mut self) {
-        self.x += 1.0;
+        self.x += self.vx;
     }
 }
 

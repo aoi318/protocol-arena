@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import init, { NetworkState } from 'net-core';
 import { HexViewer } from './HexViewer';
 
-const PACKET_SIZE = 24;
+const PACKET_SIZE = 32;
 const OFFSET_STATE = 5;
 const OFFSET_X = 8;
 const OFFSET_Y = 16;
@@ -131,8 +131,8 @@ export const NetworkCanvas = () => {
             {/* メイン画面 */}
             <canvas
                 ref={canvasRef}
-                width={800}
-                height={400}
+                width={1000}
+                height={500}
                 style={{ border: '1px solid black', background: '#f0f0f0', cursor: 'pointer' }}
                 onClick={handleClick}
             />
