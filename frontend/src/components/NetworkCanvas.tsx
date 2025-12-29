@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import init, { NetworkState } from 'net-core';
 
-const PACKET_SIZE = 32;
-const OFFSET_STATE = 24;
+const PACKET_SIZE = 24;
+const OFFSET_STATE = 5;
 const OFFSET_X = 8;
 const OFFSET_Y = 16;
 

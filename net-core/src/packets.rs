@@ -8,9 +8,9 @@ use wasm_bindgen::prelude::*;
 pub struct Packet {
     pub id: u32,
     pub kind: u8, // 0: TCP, 1: UDP
+    pub tcp_state: u8,
     pub x: f64,
     pub y: f64,
-    pub tcp_state: u8,
 }
 
 #[wasm_bindgen]
@@ -54,9 +54,9 @@ impl Packet {
         Self {
             id,
             kind,
+            tcp_state: TcpState::Closed as u8,
             x,
             y,
-            tcp_state: TcpState::Closed as u8,
         }
     }
 
