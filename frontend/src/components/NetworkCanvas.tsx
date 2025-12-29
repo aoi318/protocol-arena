@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import init, { NetworkState } from 'net-core';
+import { HexViewer } from './HexViewer';
 
 const PACKET_SIZE = 24;
 const OFFSET_STATE = 5;
@@ -13,6 +14,7 @@ export const NetworkCanvas = () => {
     const stateRef = useRef<NetworkState | null>(null);
 
     const [wasmMemory, setWasmMemory] = useState<WebAssembly.Memory | null>(null);
+    const [selectedPacket, setSelectedPacket] = useState<DataView | null>(null);
 
     useEffect(() => {
         const startWasm = async () => {
@@ -72,12 +74,50 @@ export const NetworkCanvas = () => {
         return () => cancelAnimationFrame(animationId);
     }, [wasmMemory]);
 
+    const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current;
+        const state = stateRef.current;
+        if (!canvas || !state || !wasmMemory) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const view = new DataView(wasmMemory.buffer);
+        const ptr = state.packets_ptr();
+        const len = state.packets_len();
+
+        for (let i = 0; i < len; i++) {
+            const base = ptr + (i * PACKET_SIZE);
+            const x = view.getFloat64(base + OFFSET_X, true);
+            const y = view.getFloat64(base + OFFSET_Y, true);
+
+            const dist = Math.sqrt((x - mouseX) ** 2 + (y - mouseY) ** 2);
+
+            if (dist < 15) {
+                const packetData = wasmMemory.buffer.slice(base, base + PACKET_SIZE);
+                setSelectedPacket(new DataView(packetData));
+
+                return;
+            }
+
+            setSelectedPacket(null);
+        }
+    }
+
     return (
-        <canvas
-            ref={canvasRef}
-            width={800}
-            height={400}
-            style={{ border: '1px solid black', background: '#f0f0f0' }}
-        />
+        <div>
+            <canvas
+                ref={canvasRef}
+                width={800}
+                height={400}
+                style={{ border: '1px solid black', background: '#f0f0f0', cursor: 'pointer' }}
+                onClick={handleClick}
+            />
+
+            <HexViewer data={selectedPacket} label="Packet Snapshot" />
+        </div>
+
+
     );
 };

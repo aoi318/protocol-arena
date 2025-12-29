@@ -11,6 +11,12 @@ pub struct Packet {
     pub tcp_state: u8,
     pub x: f64,
     pub y: f64,
+    /*
+    | 0-3 (id) | 4 (kind) | 5 (state) | 6-7 (PAD 2byte) |
+    | 8-15 (x) |
+    |16-23 (y) |
+    Total: 24 bytes
+    */
 }
 
 #[wasm_bindgen]
