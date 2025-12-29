@@ -54,8 +54,6 @@ export const NetworkCanvas = () => {
                 const y = view.getFloat64(base + OFFSET_Y, true);
                 const stateVal = view.getUint8(base + OFFSET_STATE);
 
-                console.log(stateVal);
-
                 ctx.beginPath();
                 ctx.arc(x, y, 10, 0, Math.PI * 2);
 
