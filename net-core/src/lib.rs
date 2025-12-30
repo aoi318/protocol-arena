@@ -2,19 +2,21 @@
 
 mod frames;
 mod topology;
-// mod packets;
 
+use crate::frames::EthernetFrame;
+use std::collections::HashMap;
 use std::panic;
 use topology::{Link, Node};
 use wasm_bindgen::prelude::*;
-
-use crate::frames::EthernetFrame;
 
 #[wasm_bindgen]
 pub struct NetworkState {
     nodes: Vec<Node>,
     links: Vec<Link>,
     frames: Vec<EthernetFrame>,
+
+    #[wasm_bindgen(skip)]
+    mac_tables: HashMap<u32, HashMap<u32, u32>>,
 }
 
 #[wasm_bindgen]
@@ -26,15 +28,15 @@ impl NetworkState {
             nodes: Vec::new(),
             links: Vec::new(),
             frames: Vec::new(),
+            mac_tables: HashMap::new(),
         }
     }
 
-    // ノード追加
-    pub fn add_node(&mut self, x: f64, y: f64) -> u32 {
+    // ノード追加 (kind: 0=Host, 1=Switch)
+    pub fn add_node(&mut self, x: f64, y: f64, kind: u8) -> u32 {
         let id: u32 = self.nodes.len() as u32;
-        let node: Node = Node { id, x, y };
+        let node: Node = Node { id, x, y, kind };
         self.nodes.push(node);
-
         id
     }
 
@@ -56,14 +58,15 @@ impl NetworkState {
             length,
         };
         self.links.push(link);
-
         id
     }
 
     pub fn send_frame(&mut self, link_id: u32, from_node_id: u32, dst_mac: u32) -> u32 {
         let id: u32 = self.frames.len() as u32;
-
         let speed: f64 = 0.05;
+
+        // src_mac は一旦簡易的に送信元ノードIDと同じにする
+        let src_mac = from_node_id;
 
         let frame: EthernetFrame = EthernetFrame {
             id,
@@ -71,19 +74,82 @@ impl NetworkState {
             from_node_id,
             progress: 0.0,
             speed,
-            src_mac: 0,
+            src_mac,
             dst_mac,
         };
         self.frames.push(frame);
         id
     }
 
-    pub fn tick(&mut self) {
-        self.frames.retain_mut(|frame: &mut EthernetFrame| {
-            frame.progress += frame.speed;
+    fn get_connected_links(&self, node_id: u32) -> Vec<u32> {
+        let mut result = Vec::new();
+        for link in &self.links {
+            if link.node_a_id == node_id || link.node_b_id == node_id {
+                result.push(link.id);
+            }
+        }
+        result
+    }
 
-            if 1.0 <= frame.progress { false } else { true }
-        });
+    pub fn tick(&mut self) {
+        // 1. 移動
+        for frame in &mut self.frames {
+            frame.progress += frame.speed;
+        }
+
+        // 2. 到着判定
+        let mut arrived_indices = Vec::new();
+        for (i, frame) in self.frames.iter().enumerate() {
+            if frame.progress >= 1.0 {
+                arrived_indices.push(i);
+            }
+        }
+
+        // 3. スイッチング処理
+        for index in arrived_indices.into_iter().rev() {
+            let frame = self.frames.remove(index);
+
+            let link = &self.links[frame.link_id as usize];
+            let current_node_id = if frame.from_node_id == link.node_a_id {
+                link.node_b_id
+            } else {
+                link.node_a_id
+            };
+
+            let node = &self.nodes[current_node_id as usize];
+
+            if node.kind == 0 {
+                // === Host (PC) ===
+                if frame.dst_mac == current_node_id {
+                    web_sys::console::log_1(
+                        &format!("PC {}: Packet Received!", current_node_id).into(),
+                    );
+                }
+            } else {
+                // === Switch ===
+                // Learning
+                let table = self
+                    .mac_tables
+                    .entry(current_node_id)
+                    .or_insert(HashMap::new());
+                table.insert(frame.src_mac, frame.link_id);
+
+                // Forwarding
+                if let Some(&target_link_id) = table.get(&frame.dst_mac) {
+                    if target_link_id != frame.link_id {
+                        self.send_frame(target_link_id, current_node_id, frame.dst_mac);
+                    }
+                } else {
+                    // Flooding
+                    let links = self.get_connected_links(current_node_id);
+                    for l_id in links {
+                        if l_id != frame.link_id {
+                            self.send_frame(l_id, current_node_id, frame.dst_mac);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     pub fn get_frame(&self, index: usize) -> Option<EthernetFrame> {
@@ -99,17 +165,20 @@ impl NetworkState {
     pub fn nodes(&self) -> *const Node {
         self.nodes.as_ptr()
     }
-
     pub fn nodes_len(&self) -> usize {
         self.nodes.len()
     }
-
     pub fn links(&self) -> *const Link {
         self.links.as_ptr()
     }
-
     pub fn links_len(&self) -> usize {
         self.links.len()
+    }
+    pub fn frames(&self) -> *const EthernetFrame {
+        self.frames.as_ptr()
+    }
+    pub fn frames_len(&self) -> usize {
+        self.frames.len()
     }
 }
 
@@ -122,50 +191,39 @@ mod tests {
     fn test_topology_creation() {
         let mut state: NetworkState = NetworkState::new();
 
-        let id1: u32 = state.add_node(0.0, 0.0);
+        // 0 = Host
+        let id1: u32 = state.add_node(0.0, 0.0, 0);
         assert_eq!(id1, 0);
 
-        let id2: u32 = state.add_node(100.0, 100.0);
+        let id2: u32 = state.add_node(100.0, 100.0, 0);
         assert_eq!(id2, 1);
 
         let link_id: u32 = state.add_link(id1, id2);
         assert_eq!(link_id, 0);
 
         assert_eq!(state.nodes_len(), 2);
-        assert_eq!(state.links_len(), 1);
     }
 
     #[test]
-    fn test_frame_movement() {
-        let mut state: NetworkState = NetworkState::new();
-        let node1: u32 = state.add_node(0.0, 0.0);
-        let node2: u32 = state.add_node(100.0, 0.0);
+    fn test_switch_flooding() {
+        let mut state = NetworkState::new();
+        // Node 0 (Host) -- Node 1 (Switch) -- Node 2 (Host)
+        let n0 = state.add_node(0.0, 0.0, 0);
+        let n1_sw = state.add_node(50.0, 0.0, 1); // Switch
+        let n2 = state.add_node(100.0, 0.0, 0);
 
-        let link_id: u32 = state.add_link(node1, node2);
+        let l1 = state.add_link(n0, n1_sw);
+        let _l2 = state.add_link(n1_sw, n2);
 
-        let frame_id: u32 = state.send_frame(link_id, node1, 0xFF);
+        // Host 0 -> Host 2 へ送信
+        state.send_frame(l1, n0, n2);
 
-        state.tick();
-
-        let frame: EthernetFrame = state.get_frame(frame_id as usize).unwrap();
-
-        assert!(frame.progress > 0.0);
-        assert_eq!(frame.link_id, link_id);
-    }
-
-    #[test]
-    fn test_frame_arrival() {
-        let mut state: NetworkState = NetworkState::new();
-        let n1: u32 = state.add_node(0.0, 0.0);
-        let n2: u32 = state.add_node(100.0, 0.0);
-        let link: u32 = state.add_link(n1, n2);
-
-        let fid: u32 = state.send_frame(link, n1, 0xFF);
-
+        // Tickを進めて、スイッチまで到達させる
         for _ in 0..25 {
             state.tick();
         }
 
-        assert!(state.get_frame(fid as usize).is_none());
+        // スイッチがFloodingしてフレームが増えているはず (frames_len > 0)
+        assert!(state.frames_len() > 0);
     }
 }

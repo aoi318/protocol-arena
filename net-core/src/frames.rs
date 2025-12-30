@@ -3,6 +3,7 @@
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
+#[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct EthernetFrame {
     pub id: u32,
