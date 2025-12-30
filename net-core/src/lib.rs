@@ -4,6 +4,7 @@ mod packets;
 
 use crate::packets::TcpState;
 use packets::Packet;
+use std::panic;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -14,6 +15,8 @@ pub struct NetworkState {
 #[wasm_bindgen]
 impl NetworkState {
     pub fn new() -> Self {
+        panic::set_hook(Box::new(console_error_panic_hook::hook));
+
         Self {
             packets: Vec::new(),
         }
@@ -33,10 +36,21 @@ impl NetworkState {
             packet.step();
 
             if packet.kind == 0 {
-                if 400.0 < packet.x && packet.tcp_state == TcpState::Closed as u8 {
-                    packet.tcp_state = TcpState::SynSent as u8;
-                } else if 700.0 < packet.x && packet.tcp_state == TcpState::SynSent as u8 {
-                    packet.tcp_state = TcpState::Established as u8;
+                if packet.x >= 800.0 && packet.vx > 0.0 {
+                    if packet.tcp_state == TcpState::SynSent as u8 {
+                        // SYN -> SYN/ACK
+                        packet.tcp_state = TcpState::SynReceived as u8;
+                        packet.vx = -1.0;
+                    } else if packet.tcp_state == TcpState::Established as u8 {
+                        // ACK到着
+                        packet.vx = 0.0;
+                    }
+                } else if packet.x <= 0.0 && packet.vx < 0.0 {
+                    if packet.tcp_state == TcpState::SynReceived as u8 {
+                        // SYN/ACK -> ACK
+                        packet.tcp_state = TcpState::Established as u8;
+                        packet.vx = 1.0;
+                    }
                 }
             }
         }
@@ -80,7 +94,7 @@ mod tests {
     fn test_packet_state_transition() {
         let mut state: NetworkState = NetworkState::new();
         state.add_packet(0);
-        for _ in 0..800 {
+        for _ in 0..1650 {
             state.tick();
         }
 

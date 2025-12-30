@@ -59,10 +59,16 @@ pub struct UdpHeader {
 
 impl Packet {
     pub fn new(id: u32, kind: u8, x: f64, y: f64) -> Self {
+        let initial_state = if kind == 0 {
+            TcpState::SynSent as u8
+        } else {
+            TcpState::Closed as u8
+        };
+
         Self {
             id,
             kind,
-            tcp_state: TcpState::Closed as u8,
+            tcp_state: initial_state,
             x,
             y,
             vx: 1.0,
@@ -82,7 +88,14 @@ mod tests {
     fn test_packet_creation() {
         let p: Packet = Packet::new(1, 0, 10.0, 20.0);
 
-        assert_eq!(p.tcp_state, TcpState::Closed as u8);
+        assert_eq!(p.tcp_state, TcpState::SynSent as u8);
+    }
+
+    #[test]
+    fn test_packet_size() {
+        use std::mem;
+
+        assert_eq!(mem::size_of::<Packet>(), 32, "Packet size mismatch!");
     }
 
     #[test]

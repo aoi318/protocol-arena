@@ -55,10 +55,11 @@ export const NetworkCanvas = () => {
                 ctx.beginPath();
                 ctx.arc(x, y, 10, 0, Math.PI * 2);
 
-                if (stateVal === 0) ctx.fillStyle = 'gray';
-                else if (stateVal === 2) ctx.fillStyle = 'orange';
-                else if (stateVal === 4) ctx.fillStyle = 'green';
-                else ctx.fillStyle = 'blue';
+                if (stateVal === 0) ctx.fillStyle = 'gray';        // Closed
+                else if (stateVal === 2) ctx.fillStyle = 'orange';  // SynSent (→)
+                else if (stateVal === 3) ctx.fillStyle = '#aa00ff'; // SynReceived (←) ★追加
+                else if (stateVal === 4) ctx.fillStyle = 'green';   // Established (→)
+                else ctx.fillStyle = 'blue';                        // UDP / Others
 
                 ctx.fill();
             }
