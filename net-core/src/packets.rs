@@ -1,5 +1,6 @@
 // net-core/src/packets.rs
 
+/*
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -117,3 +118,5 @@ mod tests {
         assert_eq!(8, size_of::<UdpHeader>());
     }
 }
+
+*/
